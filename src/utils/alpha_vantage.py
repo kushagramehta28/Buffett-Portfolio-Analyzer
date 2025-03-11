@@ -83,35 +83,66 @@ class AlphaVantageAPI:
     def get_all_metrics(self, symbol):
         """Get all required metrics for a stock"""
         try:
+            print(f"\nFetching metrics for {symbol}...")
+            print(f"API Key present: {'Yes' if self.api_key else 'No'}")
+            
             # Check if we've hit the API rate limit
             test_params = {
                 'function': 'TIME_SERIES_DAILY',
                 'symbol': symbol,
                 'apikey': self.api_key
             }
+            print("Testing API availability...")
             response = requests.get(self.base_url, params=test_params)
             data = response.json()
+            
+            # Log the API response for debugging
+            print(f"API Response Status: {response.status_code}")
+            if 'Note' in data:
+                print(f"API Note: {data['Note']}")
+            if 'Error Message' in data:
+                print(f"API Error: {data['Error Message']}")
             
             # If we get any error or missing data, use demo data
             if 'Note' in data or 'Error Message' in data or 'Time Series (Daily)' not in data:
                 print(f"API rate limit reached or error occurred. Using demo data for {symbol}...")
-                return self._get_demo_data(symbol)
+                demo_data = self._get_demo_data(symbol)
+                if demo_data:
+                    print(f"Using demo data for {symbol}")
+                    return demo_data
+                else:
+                    print(f"No demo data available for {symbol}")
+                    return None
             
+            print("Fetching real-time data...")
             # If no rate limit, get real data
             daily_prices = self.get_daily_prices(symbol)
             company_data = self.get_company_overview(symbol)
             
-            return {
+            result = {
                 'current_price': daily_prices['current_price'],
                 'high_price': daily_prices['high_price'],
                 'low_price': daily_prices['low_price'],
                 'pe_ratio': company_data['pe_ratio'],
                 'roe': company_data['roe']
             }
+            print(f"Successfully fetched metrics for {symbol}: {result}")
+            return result
             
+        except requests.exceptions.RequestException as e:
+            print(f"Network error for {symbol}: {str(e)}")
+            demo_data = self._get_demo_data(symbol)
+            if demo_data:
+                print(f"Falling back to demo data for {symbol}")
+                return demo_data
+            return None
         except Exception as e:
-            print(f"Error fetching metrics for {symbol}, falling back to demo data: {str(e)}")
-            return self._get_demo_data(symbol)  # Fall back to demo data on any error 
+            print(f"Unexpected error fetching metrics for {symbol}: {str(e)}")
+            demo_data = self._get_demo_data(symbol)
+            if demo_data:
+                print(f"Falling back to demo data for {symbol}")
+                return demo_data
+            return None
 
     def _get_demo_data(self, symbol):
         """Return demo data when API rate limit is reached"""
