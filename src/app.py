@@ -13,28 +13,23 @@ from .integration.integration_system import DataIntegrationSystem
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {
-    "origins": [
-        "https://buffett-portfolio-analyzer-iiitd.vercel.app",
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:4173",
-        "http://localhost:4174"
-    ],
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
-    "expose_headers": ["Content-Type", "Authorization"],
-    "supports_credentials": True,
-    "send_wildcard": False,
-    "max_age": 86400
-}})
+
+# Simplified CORS setup
+CORS(app, 
+     origins=["https://buffett-portfolio-analyzer-iiitd.vercel.app"],
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     supports_credentials=True,
+     max_age=86400)
 
 @app.after_request
 def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'https://buffett-portfolio-analyzer-iiitd.vercel.app')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    origin = request.headers.get('Origin')
+    if origin == 'https://buffett-portfolio-analyzer-iiitd.vercel.app':
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
 def validate_stock_symbol(symbol):
@@ -109,13 +104,22 @@ def add_stock():
     finally:
         db.close()
 
-@app.route('/analyze-stocks', methods=['POST'])
+@app.route('/analyze-stocks', methods=['POST', 'OPTIONS'])
 def analyze_stocks():
     print("\n=== Starting Stock Analysis ===")
+    print(f"Request method: {request.method}")
+    print(f"Request headers: {dict(request.headers)}")
     
     # Handle OPTIONS preflight request
     if request.method == "OPTIONS":
-        return jsonify({"message": "OK"}), 200
+        response = jsonify({"message": "Preflight request successful"})
+        origin = request.headers.get('Origin')
+        if origin == 'https://buffett-portfolio-analyzer-iiitd.vercel.app':
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        return response, 200
         
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
     print(f"API Key present: {'Yes' if api_key else 'No'}")
