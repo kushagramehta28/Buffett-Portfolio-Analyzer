@@ -1,13 +1,13 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from database.db_setup import SessionLocal, Stock
-from utils.alpha_vantage import AlphaVantageAPI
+from .database.db_setup import SessionLocal, Stock
+from .utils.alpha_vantage import AlphaVantageAPI
 import re
 import os
-from data_sources.manager import DataSourceManager
-from data_sources.alpha_vantage_source import AlphaVantageSource
-from data_sources.analyst_source import AnalystDataSource
-from integration.integration_system import DataIntegrationSystem
+from .data_sources.manager import DataSourceManager
+from .data_sources.alpha_vantage_source import AlphaVantageSource
+from .data_sources.analyst_source import AnalystDataSource
+from .integration.integration_system import DataIntegrationSystem
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for now

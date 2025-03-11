@@ -3,7 +3,7 @@ services:
     name: buffett-analyzer-api
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn src.app:app --bind 0.0.0.0:$PORT
+    startCommand: gunicorn wsgi:app
     envVars:
       - key: ALPHA_VANTAGE_API_KEY
         sync: false
