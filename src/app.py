@@ -10,7 +10,17 @@ from .data_sources.analyst_source import AnalystDataSource
 from .integration.integration_system import DataIntegrationSystem
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for now
+CORS(app, resources={r"/*": {
+    "origins": [
+        "https://buffett-portfolio-analyzer-iiitd.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:4173",
+        "http://localhost:4174"
+    ],
+    "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type"]
+}})
 
 def validate_stock_symbol(symbol):
     """Validate stock symbol format (1-5 uppercase letters)"""
