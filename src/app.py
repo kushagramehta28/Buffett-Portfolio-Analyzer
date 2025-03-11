@@ -9,6 +9,9 @@ from .data_sources.alpha_vantage_source import AlphaVantageSource
 from .data_sources.analyst_source import AnalystDataSource
 from .integration.integration_system import DataIntegrationSystem
 
+# Get the application root directory
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {
     "origins": [
@@ -19,7 +22,8 @@ CORS(app, resources={r"/*": {
         "http://localhost:4174"
     ],
     "methods": ["GET", "POST", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type"]
+    "allow_headers": ["Content-Type"],
+    "supports_credentials": True
 }})
 
 def validate_stock_symbol(symbol):
@@ -98,6 +102,7 @@ def add_stock():
 def analyze_stocks():
     print("\n=== Starting Stock Analysis ===")
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
+    print(f"API Key present: {'Yes' if api_key else 'No'}")  # Debug log (don't print the actual key)
     
     if not api_key:
         print("No API key found!")
@@ -106,16 +111,30 @@ def analyze_stocks():
     db = SessionLocal()
     api = AlphaVantageAPI()
     
-    # Initialize data sources for analyst data
-    data_manager = DataSourceManager()
-    analyst_source = AnalystDataSource(csv_path='analyst_data.csv')
-    print(f"Initialized analyst source with path: analyst_data.csv")  # Debug print
-    success = data_manager.register_source(analyst_source)
-    print(f"Registered analyst source: {success}")  # Debug print
-    
     try:
+        # Initialize data sources for analyst data
+        data_manager = DataSourceManager()
+        analyst_data_path = os.path.join(APP_ROOT, 'data', 'analyst_data.csv')
+        print(f"Looking for analyst data at: {analyst_data_path}")
+        
+        if not os.path.exists(analyst_data_path):
+            print(f"Warning: Analyst data file not found at {analyst_data_path}")
+            # Create an empty analyst source if file doesn't exist
+            analyst_source = AnalystDataSource(csv_path=analyst_data_path, create_if_missing=True)
+        else:
+            analyst_source = AnalystDataSource(csv_path=analyst_data_path)
+            
+        print(f"Initialized analyst source with path: {analyst_data_path}")
+        success = data_manager.register_source(analyst_source)
+        print(f"Registered analyst source: {success}")
+        
         stocks = db.query(Stock).all()
         print(f"Found {len(stocks)} stocks to analyze")
+        
+        if not stocks:
+            print("No stocks found in database")
+            return jsonify({'message': 'No stocks found to analyze'}), 404
+            
         results = []
         invalid_stocks = []
         

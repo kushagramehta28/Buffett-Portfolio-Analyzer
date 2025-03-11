@@ -47,10 +47,18 @@ export const stockService = {
 
   analyzeStocks: async () => {
     try {
+      console.log('Starting stock analysis...');  // Debug log
+      console.log('Sending request to:', api.defaults.baseURL + '/analyze-stocks');  // Debug log
       const response = await api.post('/analyze-stocks');
+      console.log('Analysis response:', response.data);  // Debug log
       return response.data;
-    } catch (error) {
-      console.error('Error analyzing stocks:', error);
+    } catch (error: any) {
+      console.error('Error analyzing stocks:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        url: api.defaults.baseURL + '/analyze-stocks'
+      });
       throw error;
     }
   },
