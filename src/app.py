@@ -21,10 +21,21 @@ CORS(app, resources={r"/*": {
         "http://localhost:4173",
         "http://localhost:4174"
     ],
-    "methods": ["GET", "POST", "DELETE", "OPTIONS"],
-    "allow_headers": ["Content-Type"],
-    "supports_credentials": True
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+    "expose_headers": ["Content-Type", "Authorization"],
+    "supports_credentials": True,
+    "send_wildcard": False,
+    "max_age": 86400
 }})
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'https://buffett-portfolio-analyzer-iiitd.vercel.app')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 def validate_stock_symbol(symbol):
     """Validate stock symbol format (1-5 uppercase letters)"""
@@ -101,13 +112,18 @@ def add_stock():
 @app.route('/analyze-stocks', methods=['POST'])
 def analyze_stocks():
     print("\n=== Starting Stock Analysis ===")
+    
+    # Handle OPTIONS preflight request
+    if request.method == "OPTIONS":
+        return jsonify({"message": "OK"}), 200
+        
     api_key = os.getenv('ALPHA_VANTAGE_API_KEY')
     print(f"API Key present: {'Yes' if api_key else 'No'}")
     
     if not api_key:
         error_msg = "Alpha Vantage API key not found!"
         print(error_msg)
-        return jsonify({'message': error_msg}), 500
+        return jsonify({'error': error_msg}), 500
     
     db = SessionLocal()
     api = AlphaVantageAPI()
@@ -118,7 +134,7 @@ def analyze_stocks():
         
         if not stocks:
             print("No stocks found in database")
-            return jsonify({'message': 'No stocks found to analyze'}), 404
+            return jsonify({'error': 'No stocks found to analyze'}), 404
             
         results = []
         invalid_stocks = []
@@ -216,20 +232,22 @@ def analyze_stocks():
         
         # Prepare response
         response_data = {
-            'message': 'Analysis completed successfully',
+            'status': 'success',
             'results': results
         }
         if invalid_stocks:
             response_data['invalid_stocks'] = invalid_stocks
             response_data['message'] = f'Analysis completed. Removed invalid stocks: {", ".join(invalid_stocks)}'
+        else:
+            response_data['message'] = 'Analysis completed successfully'
         
-        return jsonify(response_data)
+        return jsonify(response_data), 200
         
     except Exception as e:
         error_msg = f"Error during analysis: {str(e)}"
         print(error_msg)
         db.rollback()
-        return jsonify({'message': error_msg}), 500
+        return jsonify({'error': error_msg, 'status': 'error'}), 500
     finally:
         db.close()
 
