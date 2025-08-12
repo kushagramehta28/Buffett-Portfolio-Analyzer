@@ -2,6 +2,9 @@
 
 A web application that analyzes stock portfolios using Warren Buffett's investment principles.
 
+## Live Demo
+[Visit the website](https://buffett-portfolio-analyzer-iiitd.vercel.app)
+
 ## Features
 - Add and track multiple stocks
 - Analyze stocks based on fundamental metrics
